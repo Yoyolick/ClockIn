@@ -1,8 +1,32 @@
 import socket
 import os
 import json
-
+import traceback
 from datetime import *
+
+# ADD COLOR ESCAPE CODES
+class style:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    END = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    # MAYBE ADD IF WINDOWS NO CODES TODO
+    if os.name == "nt":
+        HEADER = ""
+        OKBLUE = ""
+        OKCYAN = ""
+        OKGREEN = ""
+        WARNING = ""
+        FAIL = ""
+        END = ""
+        BOLD = ""
+        UNDERLINE = ""
+
 
 # verbose setting
 verbose = True
@@ -28,19 +52,23 @@ try:
     if not os.path.exists(passwordsDir):
         os.makedirs(passwordsDir)
         if verbose:
-            print("SERVER -> Created New Server Data Directory")
+            print(
+                style.OKGREEN
+                + "SERVER -> Created New Server Data Directory"
+                + style.END
+            )
     if not os.path.isfile(passwordsFile):
         temp = {"admin": "admin"}
         with open(passwordsFile, "w+") as f:
             f.write(json.dumps(temp))
             f.close()
         if verbose:
-            print("SERVER -> Created New Users File")
+            print(style.OKGREEN + "SERVER -> Created New Users File" + style.END)
 except Exception as e:
     print(e)
 
 
-print("Listening on port %s ..." % SERVER_PORT)
+print(style.HEADER + "Listening on port %s ..." % SERVER_PORT + style.END)
 
 while True:
     try:
@@ -52,7 +80,7 @@ while True:
 
         # Parse HTTP headers
         headers = request.split("\n")
-        print("HEADERS:", headers)
+        # print("HEADERS:", headers)
 
         filename = headers[0].split()[1]
 
@@ -75,64 +103,93 @@ while True:
                     currentProjectDir = currentUserDir + "/" + requestData[3]
                     currentUserLog = currentProjectDir + "/log.txt"
 
-                    # create logs and dirs for current request if they dont exist
-
-                    if not os.path.exists(currentProjectDir):
-                        os.makedirs(currentProjectDir)
-                        if verbose:
-                            print("SERVER -> Created New User Project Directory")
-
+                    # new user case
+                    if not os.path.exists(currentUserDir):
+                        os.makedirs(currentUserDir)
                         # if this user doesent exist we need to create their login
                         newUser = {username: password}
                         with open(passwordsFile, "w+") as f:
                             f.write(json.dumps(newUser))
                             f.close()
+                        if verbose:
+                            print(
+                                style.OKGREEN
+                                + "SERVER -> Created New User Directory"
+                                + style.END
+                            )
+                            print(
+                                style.OKGREEN
+                                + "SERVER -> Created New User Login"
+                                + style.END
+                            )
+
+                    # create logs and dirs for current request if they dont exist
+                    if not os.path.exists(currentProjectDir):
+                        os.makedirs(currentProjectDir)
+                        if verbose:
+                            print(
+                                style.OKGREEN
+                                + "SERVER -> Created New User Project Directory"
+                                + style.END
+                            )
 
                     if not os.path.isfile(currentUserLog):
                         with open(currentUserLog, "w+") as f:
                             f.write("")
                             f.close()
                         if verbose:
-                            print("SERVER -> Created New User Log")
+                            print(
+                                style.OKGREEN
+                                + "SERVER -> Created New User Log"
+                                + style.END
+                            )
 
+                    # if current password for user is not what its password is
+                    authorized = False  # defualt to no perms
                     with open(passwordsFile, "r") as f:
-                        passwordsFile = json.loads(passwordsFile)
-                        # if current password for user is not what its password is
-                        if password != passwordsFile[username]:
-                            client_connection.sendall(forbiddenpost.encode())
-                            client_connection.close()
+                        pfile = json.load(f)
                         f.close()
 
-                    if requestData[0] == "in":
-                        today = date.today()
-                        with open(currentUserLog, "w+") as f:
-                            f.write(
-                                str(
-                                    "["
-                                    + " "
-                                    + str(today.month)
-                                    + "."
-                                    + str(today.day)
-                                    + "."
-                                    + str(today.year)
-                                    + " "
-                                    + str(datetime.now().hour)
-                                    + ":"
-                                    + str(datetime.now().minute)
-                                    + " "
-                                    + "]"
-                                    + " "
-                                    + "CLOCK IN -> "
-                                    + " "
-                                    + requestData[4],
-                                )
-                            )
-                            f.close()
+                    if password == pfile[username]:
+                        response = forbiddenpost
+                        authorized = True
+                    else:
+                        authorized = False
+                        response = forbiddenpost
 
-                    # respond that we successfully logged the clock in
-                    response = normalpost
+                    if authorized:
+                        if requestData[0] == "in":
+                            today = date.today()
+                            with open(currentUserLog, "a+") as f:
+                                f.writelines(
+                                    str(
+                                        "["
+                                        + " "
+                                        + str(today.month)
+                                        + "."
+                                        + str(today.day)
+                                        + "."
+                                        + str(today.year)
+                                        + " "
+                                        + str(datetime.now().hour)
+                                        + ":"
+                                        + str(datetime.now().minute)
+                                        + " "
+                                        + "]"
+                                        + " "
+                                        + "CLOCK IN -> "
+                                        + " "
+                                        + requestData[4]
+                                        + "\n",
+                                    )
+                                )
+                                f.close()
+
+                                # respond that we successfully logged the clock in
+                                response = normalpost
                 except Exception as e:
                     print(e)
+                    traceback.print_exc()
                     # something fucked up pretty bad to get here :()
                     response = failpost
             else:
@@ -140,6 +197,7 @@ while True:
         except Exception as e:
             response = "HTTP/1.0 403 NOT FOUND\n\nInternal Server Error :("
             print(e)
+            traceback.print_exc()
 
         print("RESPONDED:", response)
 
@@ -150,8 +208,10 @@ while True:
         print(e)
 
 # TODO
-# PASSWORDS
 # RETURN TIME SPENT OVERVIEW ON PROJECTS OR RETURN THE LOG ITSELF
 # IMPLEMENT OTHER COMMANDS
 # ALLOW CHANGING PASSWORDS SERVERSIDE
 # server backups are basically a necessity
+# COLOR CODES FOR SERVER DATA AND SHIT
+# more verbose real time logging
+# LET USER MANUAL LOG CERTAIN HOURS WITH DESC

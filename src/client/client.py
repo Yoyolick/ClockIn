@@ -32,6 +32,7 @@ def header():
     print()
 
 
+# TODO CONFIGURE POSSIBLY NOT WORKING
 def configure():
     header()
     print(
@@ -57,7 +58,9 @@ def configure():
 try:
     header()
 
-    if os.path.isfile(dataJsonPath):
+    if os.path.isfile(
+        dataJsonPath
+    ):  # TODO LOAD THIS AFTER CONFIGURE TO FIX AFORMENTIONED ISSUE
         userdata = json.load(open(dataJsonPath))
         username = userdata["username"]
         password = userdata["password"]
