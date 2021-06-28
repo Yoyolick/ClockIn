@@ -1,8 +1,11 @@
-import socket
 import os
-import json
+import socket
 import traceback
 from datetime import *
+
+# my own modules
+from backend import auth
+
 
 # ADD COLOR ESCAPE CODES
 class style:
@@ -31,6 +34,9 @@ class style:
 # verbose setting
 verbose = True
 
+# other app variables
+authorizer = auth.authenticator("localServerData/logins.json")
+
 # define server post defualts
 normalpost = "HTTP/1.0 200 OK\n\n"
 failpost = "HTTP/1.0 500 OH FUCK...\n\n"
@@ -45,42 +51,8 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server_socket.bind((SERVER_HOST, SERVER_PORT))
 server_socket.listen(1)
-try:
-    # set server dirs and do other initialization shit
-    passwordsDir = "localServerData/"
-    passwordsFile = passwordsDir + "logins.json"
-    if not os.path.exists(passwordsDir):
-        os.makedirs(passwordsDir)
-        if verbose:
-            print(
-                style.OKGREEN
-                + "SERVER -> Created New Server Data Directory"
-                + style.END
-            )
-    if not os.path.isfile(passwordsFile):
-        temp = {"admin": "admin"}
-        with open(passwordsFile, "w+") as f:
-            f.write(json.dumps(temp))
-            f.close()
-        if verbose:
-            print(style.OKGREEN + "SERVER -> Created New Users File" + style.END)
-except Exception as e:
-    print(e)
-
 
 print(style.HEADER + "Listening on port %s ..." % SERVER_PORT + style.END)
-
-# util functions for sever
-def auth(password):
-    # if current password for user is not what its password is
-    with open(passwordsFile, "r") as f:
-        pfile = json.load(f)
-        f.close()
-
-    if password == pfile[username]:
-        return True
-    else:
-        return False
 
 
 def clock(operation):
@@ -171,60 +143,32 @@ while True:
                     # new user case
                     if not os.path.exists(currentUserDir):
                         os.makedirs(currentUserDir)
-                        # if this user doesent exist we need to create their login
-                        newUser = {username: password}
-                        with open(passwordsFile, "w+") as f:
-                            f.write(json.dumps(newUser))
-                            f.close()
-                        if verbose:
-                            print(
-                                style.OKGREEN
-                                + "SERVER -> Created New User Directory"
-                                + style.END
-                            )
-                            print(
-                                style.OKGREEN
-                                + "SERVER -> Created New User Login"
-                                + style.END
-                            )
 
                     # create logs and dirs for current request if they dont exist
                     if not os.path.exists(currentProjectDir):
                         os.makedirs(currentProjectDir)
-                        if verbose:
-                            print(
-                                style.OKGREEN
-                                + "SERVER -> Created New User Project Directory"
-                                + style.END
-                            )
 
                     if not os.path.isfile(currentUserLog):
                         with open(currentUserLog, "w+") as f:
                             f.write("")
                             f.close()
-                        if verbose:
-                            print(
-                                style.OKGREEN
-                                + "SERVER -> Created New User Log"
-                                + style.END
-                            )
 
-                    authorized = auth(password)
+                    authorized = authorizer.checkAccess(username, password)
+                    print(authorized)
 
                     if authorized:
                         try:
                             if requestData[0] == "in" or requestData[0] == "out":
                                 clock(requestData[0])
-
+                            """
                             elif requestData[0] == "changepwd":
                                 # TODO WHAT THE FUCK IS WRONG WITH MY CODE
-                                """
                                 with open(passwordsFile, "w+") as f:
-                                    f = json.load(f.read())
-                                    f.pop(username)
+                                    f = json.load(f)
+                                    f.pop(username, None)
                                     f.write(json.dumps({username: password}))
                                     f.close()
-                                """
+                            """
 
                             # respond that we successfully logged the clock in
                             response = normalpost

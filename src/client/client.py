@@ -34,6 +34,11 @@ def header():
 
 # TODO CONFIGURE POSSIBLY NOT WORKING
 def configure():
+
+    global username
+    global password
+    global serverIP
+
     header()
     print(
         style.FAIL
@@ -115,6 +120,7 @@ while True:
             print(style.FAIL + 'Command "in" requires 2 arguments.' + style.END)
             print(e)
             time.sleep(3)
+
     elif commands[0] == "changepwd":
         adress = "http://" + serverIP + "/clientupdate"
         data = {
