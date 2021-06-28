@@ -75,24 +75,37 @@ except Exception as e:
 while True:
     header()
     print(style.OKGREEN + "Commands:")
-    print('- in <project name> "description of what you plan to do"')
-    print('- out <project name> "description of what you\'ve done"')
+    print(
+        "- in <project name (underscore for space)> <description of what you plan to do (spaces are ok)>"
+    )
+    print(
+        "- out <project name (underscore for space)> <description of what you've done (spaces are ok)>"
+    )
     print("- reconfigure")
+    print("- changepwd <new password>")
     print(style.END)
     command = input(">")
     clear()
     commands = command.split(" ")
+
+    # every command after 2 is part of description
+    newdesc = ""
+    for i in range((len(commands) - 1) - 1):
+        # for every value after index 2, join into index 2
+        newdesc = newdesc + (commands[i + 2] + " ")
+
     if commands[0] == "reconfigure":
         configure()
-    elif commands[0] == "in":
+
+    elif commands[0] == "in" or commands[0] == "out":
         try:
             adress = "http://" + serverIP + "/clientupdate"
             data = {
-                "operation": "in",
+                "operation": commands[0],
                 "username": username,
                 "password": password,
                 "name": commands[1],
-                "description": commands[2],
+                "description": newdesc,
             }
             serverReturn = req.post(adress, data=data)
             print(serverReturn)
@@ -102,3 +115,14 @@ while True:
             print(style.FAIL + 'Command "in" requires 2 arguments.' + style.END)
             print(e)
             time.sleep(3)
+    elif commands[0] == "changepwd":
+        adress = "http://" + serverIP + "/clientupdate"
+        data = {
+            "operation": commands[0],
+            "username": username,
+            "password": password,
+            "newpwd": commands[1],
+        }
+        serverReturn = req.post(adress, data=data)
+        print(serverReturn)
+        time.sleep(3)

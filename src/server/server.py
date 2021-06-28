@@ -70,6 +70,71 @@ except Exception as e:
 
 print(style.HEADER + "Listening on port %s ..." % SERVER_PORT + style.END)
 
+# util functions for sever
+def auth(password):
+    # if current password for user is not what its password is
+    with open(passwordsFile, "r") as f:
+        pfile = json.load(f)
+        f.close()
+
+    if password == pfile[username]:
+        return True
+    else:
+        return False
+
+
+def clock(operation):
+    today = date.today()
+    with open(currentUserLog, "a+") as f:
+        if operation == "in":
+            f.writelines(
+                str(
+                    "["
+                    + " "
+                    + str(today.month)
+                    + "."
+                    + str(today.day)
+                    + "."
+                    + str(today.year)
+                    + " "
+                    + str(datetime.now().hour)
+                    + ":"
+                    + str(datetime.now().minute)
+                    + " "
+                    + "]"
+                    + " "
+                    + "IN  -> "
+                    + " "
+                    + requestData[4]
+                    + "\n",
+                )
+            )
+        elif operation == "out":
+            f.writelines(
+                str(
+                    "["
+                    + " "
+                    + str(today.month)
+                    + "."
+                    + str(today.day)
+                    + "."
+                    + str(today.year)
+                    + " "
+                    + str(datetime.now().hour)
+                    + ":"
+                    + str(datetime.now().minute)
+                    + " "
+                    + "]"
+                    + " "
+                    + "OUT -> "
+                    + " "
+                    + requestData[4]
+                    + "\n",
+                )
+            )
+        f.close()
+
+
 while True:
     try:
         # Wait for client connections
@@ -97,11 +162,11 @@ while True:
                     # temp new vars using data
                     username = requestData[1]
                     password = requestData[2]
-
-                    # reassign variables for accessing our current users project logs and dirs
-                    currentUserDir = "localServerData/" + username + "/"
-                    currentProjectDir = currentUserDir + "/" + requestData[3]
-                    currentUserLog = currentProjectDir + "/log.txt"
+                    if requestData[0] == "in" or requestData[0] == "out":
+                        # reassign variables for accessing our current users project logs and dirs
+                        currentUserDir = "localServerData/" + username + "/"
+                        currentProjectDir = currentUserDir + "/" + requestData[3]
+                        currentUserLog = currentProjectDir + "/log.txt"
 
                     # new user case
                     if not os.path.exists(currentUserDir):
@@ -144,49 +209,36 @@ while True:
                                 + style.END
                             )
 
-                    # if current password for user is not what its password is
-                    authorized = False  # defualt to no perms
-                    with open(passwordsFile, "r") as f:
-                        pfile = json.load(f)
-                        f.close()
-
-                    if password == pfile[username]:
-                        response = forbiddenpost
-                        authorized = True
-                    else:
-                        authorized = False
-                        response = forbiddenpost
+                    authorized = auth(password)
 
                     if authorized:
-                        if requestData[0] == "in":
-                            today = date.today()
-                            with open(currentUserLog, "a+") as f:
-                                f.writelines(
-                                    str(
-                                        "["
-                                        + " "
-                                        + str(today.month)
-                                        + "."
-                                        + str(today.day)
-                                        + "."
-                                        + str(today.year)
-                                        + " "
-                                        + str(datetime.now().hour)
-                                        + ":"
-                                        + str(datetime.now().minute)
-                                        + " "
-                                        + "]"
-                                        + " "
-                                        + "CLOCK IN -> "
-                                        + " "
-                                        + requestData[4]
-                                        + "\n",
-                                    )
-                                )
-                                f.close()
+                        try:
+                            if requestData[0] == "in" or requestData[0] == "out":
+                                clock(requestData[0])
 
-                                # respond that we successfully logged the clock in
-                                response = normalpost
+                            elif requestData[0] == "changepwd":
+                                # TODO WHAT THE FUCK IS WRONG WITH MY CODE
+                                """
+                                with open(passwordsFile, "w+") as f:
+                                    f = json.load(f.read())
+                                    f.pop(username)
+                                    f.write(json.dumps({username: password}))
+                                    f.close()
+                                """
+
+                            # respond that we successfully logged the clock in
+                            response = normalpost
+                        except Exception as e:
+                            print(
+                                "welp, this was literally never supposed to be reached"
+                            )
+                            print(e)
+                            traceback.print_exc()
+                            response = failpost
+
+                    else:
+                        response = forbiddenpost
+
                 except Exception as e:
                     print(e)
                     traceback.print_exc()
@@ -209,9 +261,10 @@ while True:
 
 # TODO
 # RETURN TIME SPENT OVERVIEW ON PROJECTS OR RETURN THE LOG ITSELF
-# IMPLEMENT OTHER COMMANDS
 # ALLOW CHANGING PASSWORDS SERVERSIDE
 # server backups are basically a necessity
-# COLOR CODES FOR SERVER DATA AND SHIT
 # more verbose real time logging
 # LET USER MANUAL LOG CERTAIN HOURS WITH DESC
+# fix spaces encoded as plus symbols when logged
+# add typing new password twice to accept the change
+# BETTER CHECKS FOR THINGS CLIENT SIDE LIKE PASSWORDS WITH SPACES AND TEDIOUS SHIT
