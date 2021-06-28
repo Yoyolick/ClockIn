@@ -1,10 +1,9 @@
 import os
 import socket
 import traceback
-from datetime import *
 
 # my own modules
-from backend import auth
+from backend import auth, operations
 
 
 # ADD COLOR ESCAPE CODES
@@ -55,58 +54,6 @@ server_socket.listen(1)
 print(style.HEADER + "Listening on port %s ..." % SERVER_PORT + style.END)
 
 
-def clock(operation):
-    today = date.today()
-    with open(currentUserLog, "a+") as f:
-        if operation == "in":
-            f.writelines(
-                str(
-                    "["
-                    + " "
-                    + str(today.month)
-                    + "."
-                    + str(today.day)
-                    + "."
-                    + str(today.year)
-                    + " "
-                    + str(datetime.now().hour)
-                    + ":"
-                    + str(datetime.now().minute)
-                    + " "
-                    + "]"
-                    + " "
-                    + "IN  -> "
-                    + " "
-                    + requestData[4]
-                    + "\n",
-                )
-            )
-        elif operation == "out":
-            f.writelines(
-                str(
-                    "["
-                    + " "
-                    + str(today.month)
-                    + "."
-                    + str(today.day)
-                    + "."
-                    + str(today.year)
-                    + " "
-                    + str(datetime.now().hour)
-                    + ":"
-                    + str(datetime.now().minute)
-                    + " "
-                    + "]"
-                    + " "
-                    + "OUT -> "
-                    + " "
-                    + requestData[4]
-                    + "\n",
-                )
-            )
-        f.close()
-
-
 while True:
     try:
         # Wait for client connections
@@ -154,21 +101,20 @@ while True:
                             f.close()
 
                     authorized = authorizer.checkAccess(username, password)
-                    print(authorized)
 
                     if authorized:
                         try:
                             if requestData[0] == "in" or requestData[0] == "out":
-                                clock(requestData[0])
-                            """
-                            elif requestData[0] == "changepwd":
-                                # TODO WHAT THE FUCK IS WRONG WITH MY CODE
-                                with open(passwordsFile, "w+") as f:
-                                    f = json.load(f)
-                                    f.pop(username, None)
-                                    f.write(json.dumps({username: password}))
+                                with open(currentUserLog, "a+") as f:
+                                    f.writelines(
+                                        operations.clock(requestData[0], requestData[4])
+                                    )
                                     f.close()
-                            """
+
+                            elif requestData[0] == "changepwd":
+                                authorizer.changePassword(
+                                    username, password, requestData[3]
+                                )
 
                             # respond that we successfully logged the clock in
                             response = normalpost
@@ -205,10 +151,7 @@ while True:
 
 # TODO
 # RETURN TIME SPENT OVERVIEW ON PROJECTS OR RETURN THE LOG ITSELF
-# ALLOW CHANGING PASSWORDS SERVERSIDE
 # server backups are basically a necessity
 # more verbose real time logging
 # LET USER MANUAL LOG CERTAIN HOURS WITH DESC
-# fix spaces encoded as plus symbols when logged
 # add typing new password twice to accept the change
-# BETTER CHECKS FOR THINGS CLIENT SIDE LIKE PASSWORDS WITH SPACES AND TEDIOUS SHIT

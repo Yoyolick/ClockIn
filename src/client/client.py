@@ -131,4 +131,19 @@ while True:
         }
         serverReturn = req.post(adress, data=data)
         print(serverReturn)
+
+        a_file = open(dataJsonPath, "r")
+        json_object = json.load(a_file)
+        a_file.close()
+
+        json_object["password"] = commands[1]
+
+        a_file = open(dataJsonPath, "w")
+        json.dump(json_object, a_file)
+        a_file.close()
+
+        password = commands[1]
+
         time.sleep(3)
+
+# TODO parse server response codes into terminal ui

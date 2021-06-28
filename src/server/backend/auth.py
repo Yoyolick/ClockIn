@@ -14,7 +14,7 @@ class authenticator:
 
         # create passwords file if not exists
         if not os.path.isfile(path):
-            with open(self.path, "a+") as f:
+            with open(self.path, "w+") as f:
                 json.dump({"admin": "admin"}, f)
                 f.close()
 
@@ -30,19 +30,25 @@ class authenticator:
     def checkAccess(self, user, pswd):
         # refresh our keys incase we have written since
         authenticator.refresh(self)
-        dict = self.keys
-        print(user)
-        print(pswd)
-        print(dict)
+        # create new login if not exists
+        if not user in self.keys:
+            self.keys[user] = pswd
+
+            with open(self.path, "w+") as f:
+                json.dump(self.keys, f)
+                f.close()
 
         # check if the password equals the usernames password
-        try:
-            if pswd == self.keys[user]:
-                return True
-            elif pswd != self.keys[user]:
-                return False
-        except:
-            # this case is if the user does not exist in the file
-            self.keys[user] = pswd
-            json.dump(self.keys, self.path)
+        if pswd == self.keys[user]:
             return True
+        elif pswd != self.keys[user]:
+            return False
+
+    def changePassword(self, user, pswd, newpass):
+        # refresh our keys incase we have written since
+        authenticator.refresh(self)
+        if authenticator.checkAccess(self, user, pswd):
+            self.keys[user] = newpass
+            with open(self.path, "w+") as f:
+                json.dump(self.keys, f)
+                f.close()
